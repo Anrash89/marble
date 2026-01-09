@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marble Race: Physics Battle</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap');
+
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #1a1a2e;
+            font-family: 'Montserrat', sans-serif;
+            color: white;
+            user-select: none;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        /* UI Overlay Styles */
+        .ui-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(26, 26, 46, 0.95);
+            z-index: 10;
+            transition: opacity 0.5s;
+        }
+
+        .hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        h1 {
+            font-size: 3rem;
+            text-transform: uppercase;
+            background: linear-gradient(45deg, #ff00cc, #3333ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px rgba(51, 51, 255, 0.5);
+        }
+
+        .control-group {
+            margin: 15px 0;
+            text-align: center;
+        }
+
+        label {
+            font-size: 1.2rem;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        input[type="number"] {
+            padding: 10px;
+            font-size: 1.2rem;
+            border-radius: 5px;
+            border: none;
+            width: 80px;
+            text-align: center;
+        }
+
+        .file-upload {
+            position: relative;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .file-upload input {
+            position: absolute;
+            font-size: 100px;
+            opacity: 0;
+            right: 0;
+            top: 0;
+            cursor: pointer;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #ff00cc, #3333ff);
+            color: white;
+            padding: 15px 40px;
+            font-size: 1.5rem;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 0 15px rgba(255, 0, 204, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-transform: uppercase;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 25px rgba(255, 0, 204, 0.6);
+        }
+
+        .preview-container {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 80%;
+        }
+
+        .preview-img {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid white;
+        }
+
+        #hud {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: rgba(255, 255, 255, 0.8);
+            z-index: 5;
+            text-align: right;
+        }
+
+        /* Winner Screen */
+        #winner-avatar {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            border: 5px solid #ffd700;
+            box-shadow: 0 0 50px #ffd700;
+            margin-bottom: 20px;
+            object-fit: cover;
+            background: #fff;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div id="hud" class="hidden">Лидер: <span id="leader-name">---</span></div>
+    </div>
+
+    <div id="start-screen" class="ui-screen">
+        <h1>Marble Physics Race</h1>
+        
+        <div class="control-group">
+            <label>Количество шариков (2-50):</label>
+            <input type="number" id="ball-count" value="10" min="2" max="50">
+        </div>
+
+        <div class="control-group file-upload">
+            <button class="btn" style="background: #444; font-size: 1rem;">Загрузить фото участников</button>
+            <input type="file" id="photo-upload" accept="image/*" multiple>
+        </div>
+        <div class="preview-container" id="preview-area"></div>
+        <p style="font-size: 0.9rem; opacity: 0.7; max-width: 600px; text-align: center;">
+            Совет: Загрузите несколько фото. Если фото меньше чем шариков, они будут повторяться. <br>
+            Если фото нет, будут использованы цвета.
+        </p>
+
+        <br>
+        <button class="btn" onclick="startGame()">НАЧАТЬ ГОНКУ</button>
+    </div>
+
+    <div id="winner-screen" class="ui-screen hidden">
+        <h1 style="color: #ffd700; -webkit-text-fill-color: #ffd700;">ПОБЕДИТЕЛЬ!</h1>
+        <img id="winner-avatar" src="" alt="Winner">
+        <h2 id="winner-text">Ball #1</h2>
+        <button class="btn" onclick="location.reload()">НОВАЯ ИГРА</button>
+    </div>
+
+    <script>
+        // --- AUDIO ENGINE (Synthesized) ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            if (type === 'start') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(220, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.5);
+                gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.5);
+            } else if (type === 'win') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+                osc.frequency.linearRampToValueAtTime(880, audioCtx.currentTime + 0.2);
+                osc.frequency.linearRampToValueAtTime(440, audioCtx.currentTime + 0.4);
+                osc.frequency.linearRampToValueAtTime(1760, audioCtx.currentTime + 0.6);
+                gainNode.gain.setValueAtTime(0.5, audioCtx.currentTime);
+                gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 1.5);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 1.5);
+            }
+        }
+
+        // --- GAME VARIABLES ---
+        const Engine = Matter.Engine,
+              Render = Matter.Render,
+              Runner = Matter.Runner,
+              Bodies = Matter.Bodies,
+              Composite = Matter.Composite,
+              Events = Matter.Events,
+              Vector = Matter.Vector;
+
+        let engine, runner, render;
+        let canvas, ctx;
+        let balls = [];
+        let userImages = [];
+        let isRaceActive = false;
+        let cameraY = 0;
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        
+        // Settings
+        const wallThickness = 40;
+        const ballRadius = 14;
+        const trackLength = 12000; // Very long track for ~1 min
+        
+        // --- IMAGE HANDLING ---
+        document.getElementById('photo-upload').addEventListener('change', function(e) {
+            const files = e.target.files;
+            const previewArea = document.getElementById('preview-area');
+            previewArea.innerHTML = '';
+            userImages = [];
+
+            Array.from(files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    userImages.push(img);
+                    
+                    // Preview
+                    const thumb = document.createElement('img');
+                    thumb.src = event.target.result;
+                    thumb.className = 'preview-img';
+                    previewArea.appendChild(thumb);
+                };
+                reader.readAsDataURL(file);
+            });
+        });
+
+        // --- INITIALIZATION ---
+        function initPhysics() {
+            engine = Engine.create();
+            engine.world.gravity.y = 0.8; // Чуть слабее гравитация, чтобы падали дольше
+
+            canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            document.getElementById('game-container').appendChild(canvas);
+            ctx = canvas.getContext('2d');
+
+            runner = Runner.create();
+        }
+
+        // --- TRACK GENERATION ---
+        function createTrack() {
+            const world = engine.world;
+            const colors = ['#ff00cc', '#3333ff', '#00ffcc', '#ffff00'];
+
+            // 1. Walls
+            const wallLeft = Bodies.rectangle(10, trackLength / 2, wallThickness, trackLength, { isStatic: true, render: { fillStyle: '#333' } });
+            const wallRight = Bodies.rectangle(width - 10, trackLength / 2, wallThickness, trackLength, { isStatic: true, render: { fillStyle: '#333' } });
+            // Floor
+            const floor = Bodies.rectangle(width / 2, trackLength + 50, width, 100, { 
+                isStatic: true, 
+                label: 'finish',
+                render: { fillStyle: '#fff' } 
+            });
+
+            Composite.add(world, [wallLeft, wallRight, floor]);
+
+            // 2. Obstacles Generation
+            let currentY = 300; // Start below spawn
+            const gap = 350; // Distance between sections
+
+            while (currentY < trackLength - 500) {
+                const type = Math.floor(Math.random() * 4); // 4 types of obstacles
+                
+                // Color for this section
+                const obsColor = colors[Math.floor(Math.random() * colors.length)];
+
+                if (type === 0) {
+                    // --- Plinko (Pegs) ---
+                    const rows = 5;
+                    for (let r = 0; r < rows; r++) {
+                        for (let c = 0; c < 8; c++) {
+                            const offset = (r % 2 === 0) ? 0 : 40;
+                            const peg = Bodies.circle(
+                                100 + c * 80 + offset + (Math.random()*10), 
+                                currentY + r * 60, 
+                                8, 
+                                { isStatic: true, render: { fillStyle: obsColor }, restitution: 0.5 }
+                            );
+                            Composite.add(world, peg);
+                        }
+                    }
+                    currentY += rows * 60 + 100;
+
+                } else if (type === 1) {
+                    // --- Slopes (Ramps) ---
+                    const slope1 = Bodies.rectangle(width * 0.3, currentY, width * 0.5, 20, { 
+                        isStatic: true, angle: Math.PI / 6, render: { fillStyle: obsColor } 
+                    });
+                    const slope2 = Bodies.rectangle(width * 0.7, currentY + 150, width * 0.5, 20, { 
+                        isStatic: true, angle: -Math.PI / 6, render: { fillStyle: obsColor } 
+                    });
+                    Composite.add(world, [slope1, slope2]);
+                    currentY += 400;
+
+                } else if (type === 2) {
+                    // --- Spinner (Windmill) ---
+                    const spinnerX = width / 2 + (Math.random() * 100 - 50);
+                    const spinner = Bodies.rectangle(spinnerX, currentY + 100, 300, 20, {
+                        render: { fillStyle: obsColor }
+                    });
+                    const pivot = Matter.Constraint.create({
+                        pointA: { x: spinnerX, y: currentY + 100 },
+                        bodyB: spinner,
+                        length: 0,
+                        stiffness: 1
+                    });
+                    Composite.add(world, [spinner, pivot]);
+                    
+                    // Add some static bumpers around
+                    Composite.add(world, Bodies.circle(spinnerX - 200, currentY + 50, 20, { isStatic: true, render: { fillStyle: '#fff' } }));
+                    Composite.add(world, Bodies.circle(spinnerX + 200, currentY + 50, 20, { isStatic: true, render: { fillStyle: '#fff' } }));
+                    
+                    currentY += 400;
+
+                } else {
+                     // --- Funnel ---
+                    const w = width * 0.4;
+                    const leftSide = Bodies.rectangle(width/2 - w/2 - 20, currentY, w, 20, { isStatic: true, angle: Math.PI/4, render: { fillStyle: obsColor } });
+                    const rightSide = Bodies.rectangle(width/2 + w/2 + 20, currentY, w, 20, { isStatic: true, angle: -Math.PI/4, render: { fillStyle: obsColor } });
+                    Composite.add(world, [leftSide, rightSide]);
+                    currentY += 300;
+                }
+
+                currentY += gap;
+            }
+            
+            // Finish Line decorations
+            for(let i=0; i<10; i++) {
+                Composite.add(world, Bodies.rectangle((i* (width/10)) + 20, trackLength - 20, 20, 200, {isStatic: true, render: {fillStyle: '#fff'}}));
+            }
+        }
+
+        // --- GAME LOOP & RENDERING ---
+        function startGame() {
+            const count = parseInt(document.getElementById('ball-count').value);
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('hud').classList.remove('hidden');
+            
+            initPhysics();
+            createTrack();
+            playSound('start');
+
+            // Spawn Balls
+            for (let i = 0; i < count; i++) {
+                const x = (width / 2) + (Math.random() * 40 - 20);
+                const y = -100 - (i * 50); // Stack them up high
+                
+                const img = userImages.length > 0 ? userImages[i % userImages.length] : null;
+                const hue = Math.random() * 360;
+
+                const ball = Bodies.circle(x, y, ballRadius, {
+                    restitution: 0.5,
+                    friction: 0.005,
+                    density: 0.04,
+                    label: 'marble',
+                    render: {
+                        fillStyle: `hsl(${hue}, 70%, 50%)`
+                    }
+                });
+                
+                // Attach custom props
+                ball.customId = i + 1;
+                ball.customImg = img;
+                ball.customColor = `hsl(${hue}, 70%, 50%)`;
+
+                balls.push(ball);
+                Composite.add(engine.world, ball);
+            }
+
+            isRaceActive = true;
+            Runner.run(runner, engine);
+            requestAnimationFrame(gameLoop);
+        }
+
+        function drawCamera() {
+            // Find leading ball (lowest Y)
+            let maxY = 0;
+            let leaderName = "";
+            
+            balls.forEach(b => {
+                if (b.position.y > maxY) {
+                    maxY = b.position.y;
+                    leaderName = "Мрамор #" + b.customId;
+                }
+            });
+
+            // Update HUD
+            document.getElementById('leader-name').innerText = leaderName;
+
+            // Calculate Target Camera Y (center the leader, but clamp to bounds)
+            let targetY = -maxY + height * 0.7; 
+            if (targetY > 0) targetY = 0; // Don't scroll above top
+            if (targetY < -(trackLength - height)) targetY = -(trackLength - height); // Don't scroll past bottom
+
+            // Smooth Lerp
+            cameraY += (targetY - cameraY) * 0.1;
+
+            ctx.clearRect(0, 0, width, height);
+            ctx.save();
+            ctx.translate(0, cameraY);
+        }
+
+        function drawBodies() {
+            const bodies = Composite.allBodies(engine.world);
+
+            bodies.forEach(body => {
+                // Check if body is visible in viewport to save performance
+                if (body.position.y + cameraY < -100 || body.position.y + cameraY > height + 100) return;
+
+                ctx.beginPath();
+                const vertices = body.vertices;
+                ctx.moveTo(vertices[0].x, vertices[0].y);
+                for (let j = 1; j < vertices.length; j += 1) {
+                    ctx.lineTo(vertices[j].x, vertices[j].y);
+                }
+                ctx.lineTo(vertices[0].x, vertices[0].y);
+                ctx.closePath();
+
+                // Draw Style
+                ctx.fillStyle = body.render.fillStyle;
+                ctx.fill();
+
+                // Draw Image if marble
+                if (body.label === 'marble' && body.customImg) {
+                    ctx.save();
+                    ctx.clip(); // Clip to the circle shape we just drew
+                    ctx.translate(body.position.x, body.position.y);
+                    ctx.rotate(body.angle);
+                    ctx.drawImage(body.customImg, -ballRadius, -ballRadius, ballRadius * 2, ballRadius * 2);
+                    ctx.restore();
+                    
+                    // Add shine
+                    ctx.beginPath();
+                    ctx.arc(body.position.x - 4, body.position.y - 4, 4, 0, Math.PI * 2);
+                    ctx.fillStyle = "rgba(255,255,255,0.4)";
+                    ctx.fill();
+                } else if (body.label === 'marble') {
+                    // Number fallback
+                    ctx.fillStyle = "#fff";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.font = "12px Arial";
+                    ctx.fillText(body.customId, body.position.x, body.position.y);
+                }
+            });
+            ctx.restore();
+        }
+
+        function checkFinish() {
+            // Check if any ball crossed the line
+            balls.forEach(ball => {
+                if (ball.position.y >= trackLength - ballRadius - 20) {
+                    endGame(ball);
+                }
+            });
+        }
+
+        function endGame(winnerBall) {
+            if (!isRaceActive) return;
+            isRaceActive = false;
+            playSound('win');
+            
+            // Show Winner Screen
+            const screen = document.getElementById('winner-screen');
+            const avatar = document.getElementById('winner-avatar');
+            const text = document.getElementById('winner-text');
+
+            screen.classList.remove('hidden');
+            
+            if (winnerBall.customImg) {
+                avatar.src = winnerBall.customImg.src;
+            } else {
+                // Create a colored placeholder if no image
+                avatar.src = "";
+                avatar.style.backgroundColor = winnerBall.customColor;
+            }
+            
+            text.innerText = `Мрамор #${winnerBall.customId}`;
+            Runner.stop(runner);
+        }
+
+        function gameLoop() {
+            if (!isRaceActive) return;
+
+            drawCamera();
+            drawBodies();
+            checkFinish();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+    </script>
+</body>
+</html>
