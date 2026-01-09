@@ -2,362 +2,378 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cartoon Marble Run - No Jam Fix</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Marbula Pro Racing</title>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
+
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
 
-        :root {
-            --primary: #FF6B6B;
-            --secondary: #4ECDC4;
-            --accent: #FFE66D;
-            --dark: #2C3E50;
-            --light: #F7F9FC;
-        }
+        :root { --primary: #ff3333; --dark: #111; --ui-bg: rgba(20, 20, 30, 0.95); }
+        body { margin: 0; overflow: hidden; background: #0a0a0a; font-family: 'Orbitron', sans-serif; color: white; }
+        canvas { display: block; }
 
-        body {
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            background-color: #87CEEB;
-            font-family: 'Nunito', sans-serif;
-            user-select: none;
-        }
-
-        /* Анимированный фон */
-        #bg-clouds {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image: 
-                radial-gradient(circle at 20% 80%, rgba(255,255,255,0.4) 10%, transparent 20%),
-                radial-gradient(circle at 80% 30%, rgba(255,255,255,0.4) 15%, transparent 30%);
-            background-size: 120% 120%;
-            animation: cloudsMove 60s infinite linear;
-            z-index: -1;
-        }
-        @keyframes cloudsMove { 0% { background-position: 0% 0%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 0%; } }
-
-        #game-container { position: relative; width: 100vw; height: 100vh; }
-        canvas { display: block; filter: saturate(1.2) contrast(1.1); }
-
-        /* UI */
-        .ui-screen {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            background: rgba(44, 62, 80, 0.95); z-index: 10;
-            transition: opacity 0.5s; backdrop-filter: blur(5px);
-        }
-        .hidden { opacity: 0; pointer-events: none; }
+        /* UI STYLES */
+        .ui-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: var(--ui-bg); z-index: 100; transition: all 0.5s; backdrop-filter: blur(10px); }
+        .hidden { opacity: 0; pointer-events: none; transform: scale(1.1); }
         
-        h1 { font-family: 'Fredoka One', cursive; font-size: 3.5rem; color: var(--accent); margin-bottom: 20px; text-shadow: 3px 3px var(--primary); text-align: center;}
-        .panel { background: var(--light); padding: 30px; border-radius: 20px; text-align: center; border: 5px solid var(--secondary); max-width: 500px;}
+        h1 { font-size: 4rem; text-transform: uppercase; letter-spacing: 5px; margin-bottom: 30px; text-shadow: 0 0 20px var(--primary); background: linear-gradient(45deg, #fff, var(--primary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         
-        input[type="number"] { padding: 10px; font-size: 1.5rem; border-radius: 10px; border: 3px solid var(--secondary); width: 80px; text-align: center; font-family: 'Fredoka One'; color: var(--primary); }
+        .panel { background: rgba(255,255,255,0.05); padding: 40px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.5); max-width: 600px; width: 90%; }
         
-        .file-upload-btn { background: var(--secondary); color: white; padding: 10px 20px; border-radius: 20px; cursor: pointer; font-weight: bold; display: inline-block; margin: 10px 0; }
+        .control-group { margin-bottom: 25px; }
+        label { display: block; margin-bottom: 10px; font-weight: 700; letter-spacing: 2px; color: #aaa; }
+        input[type=number] { background: #222; border: 2px solid #444; color: var(--primary); font-family: 'Orbitron'; font-size: 2rem; padding: 10px; width: 120px; text-align: center; border-radius: 5px; outline: none; }
+        input[type=number]:focus { border-color: var(--primary); }
+
+        .custom-file-upload { display: inline-block; padding: 15px 30px; background: #333; color: #fff; border-radius: 5px; cursor: pointer; transition: 0.3s; border: 2px solid #444; font-weight: bold; letter-spacing: 1px; }
+        .custom-file-upload:hover { background: var(--primary); border-color: var(--primary); color: #000; }
         #photo-upload { display: none; }
-        
-        .btn { background: var(--primary); color: white; padding: 15px 40px; font-size: 1.8rem; border: none; border-radius: 40px; cursor: pointer; font-family: 'Fredoka One'; margin-top: 20px; box-shadow: 0 6px 0 #c0392b; transition: 0.1s; }
-        .btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #c0392b; }
 
-        .preview-container { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; margin-top: 10px; }
-        .preview-img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent); }
+        .preview-area { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 20px; max-height: 150px; overflow-y: auto; }
+        .preview-img { width: 50px; height: 50px; border-radius: 50%; border: 2px solid var(--primary); object-fit: cover; }
 
-        #hud { position: absolute; top: 20px; left: 20px; background: rgba(255,255,255,0.9); padding: 10px 20px; border-radius: 15px; border: 3px solid var(--accent); font-weight: bold; font-family: 'Fredoka One'; font-size: 1.2rem; color: var(--dark); z-index: 5; }
+        .btn-start { background: linear-gradient(45deg, var(--primary), #ff6600); border: none; padding: 20px 60px; font-size: 2rem; color: white; font-family: 'Orbitron'; font-weight: 900; text-transform: uppercase; letter-spacing: 3px; cursor: pointer; clip-path: polygon(10% 0, 100% 0, 90% 100%, 0 100%); transition: 0.3s; margin-top: 30px; }
+        .btn-start:hover { transform: scale(1.05); box-shadow: 0 0 30px var(--primary); }
 
-        #winner-avatar { width: 150px; height: 150px; border-radius: 50%; border: 8px solid var(--accent); margin: 20px; object-fit: cover; background: #fff; }
+        #hud { position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.7); padding: 15px 30px; border-left: 5px solid var(--primary); clip-path: polygon(0 0, 100% 0, 95% 100%, 0 100%); }
+        #hud div { font-size: 1.2rem;color:#ccc; }
+        #leader-name { font-size: 2rem; font-weight: 900; color: var(--primary); }
+
+        /* Winner */
+        #winner-card { background: linear-gradient(135deg, #222, #111); padding: 50px; border-radius: 20px; border: 3px solid var(--primary); text-align: center; box-shadow: 0 0 100px rgba(255,50,50,0.5); }
+        #winner-avatar { width: 200px; height: 200px; border-radius: 50%; border: 8px solid var(--primary); box-shadow: 0 0 50px var(--primary); object-fit: cover; background: #fff;}
     </style>
 </head>
 <body>
-    <div id="bg-clouds"></div>
-    <div id="game-container">
-        <div id="hud" class="hidden">Лидер: <span id="leader-name">---</span></div>
-    </div>
 
     <div id="start-screen" class="ui-screen">
-        <h1>Гонка Шариков 2.0</h1>
+        <h1>Marbula Pro Racing</h1>
         <div class="panel">
-            <label style="font-size: 1.2rem; font-weight:bold; display:block; margin-bottom:10px;">Сколько участников?</label>
-            <input type="number" id="ball-count" value="30" min="2" max="100">
-            <br>
-            <label for="photo-upload" class="file-upload-btn">Загрузить фото 📸</label>
-            <input type="file" id="photo-upload" accept="image/*" multiple>
-            <div class="preview-container" id="preview-area"></div>
+            <div class="control-group">
+                <label>RACERS COUNT</label>
+                <input type="number" id="ball-count" value="20" min="2" max="100">
+            </div>
+            <div class="control-group">
+                <label>UPLOAD SKINS (OPTIONAL)</label>
+                <label for="photo-upload" class="custom-file-upload">CHOOSE PHOTOS 📁</label>
+                <input type="file" id="photo-upload" accept="image/*" multiple>
+                <div class="preview-area" id="preview-box"></div>
+            </div>
         </div>
-        <button class="btn" onclick="startGame()">ПОГНАЛИ!</button>
+        <button class="btn-start" onclick="initGame()">START RACE</button>
+    </div>
+
+    <div id="hud" class="hidden">
+        <div>LEADER</div>
+        <div id="leader-name">---</div>
     </div>
 
     <div id="winner-screen" class="ui-screen hidden">
-        <h1 style="color: gold;">🏆 ПОБЕДИТЕЛЬ 🏆</h1>
-        <img id="winner-avatar" src="" alt="Winner">
-        <h2 id="winner-text" style="color: white; font-family: 'Fredoka One'; font-size: 2rem;"></h2>
-        <button class="btn" onclick="location.reload()">НОВАЯ ИГРА</button>
+        <div id="winner-card">
+            <h1 style="margin-bottom: 10px;">WINNER!</h1>
+            <img id="winner-avatar" src="">
+            <h2 id="winner-text" style="font-size: 3rem; color: var(--primary); margin: 20px 0;"></h2>
+            <button class="btn-start" style="font-size: 1.5rem; padding: 15px 40px;" onclick="location.reload()">RESTART</button>
+        </div>
     </div>
 
     <script>
-        // --- AUDIO ---
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        function playSound(type) {
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain); gain.connect(audioCtx.destination);
-            const now = audioCtx.currentTime;
+        // --- CONFIGURATION ---
+        const CONFIG = {
+            trackWidth: 380,    // Широкая трасса как на фото
+            ballRadius: 22,     // Крупные шарики
+            wallHeight: 60,     // Высота бортиков
+            gravity: 1.2,       // Сильная гравитация для скорости
+            trackFriction: 0.02,// Трение асфальта
+            ballFriction: 0.01, // Трение шарика (качение)
+            ballRestitution: 0.4, // Упругость
+            bgColor: 0x1a1a1a
+        };
 
-            if (type === 'start') {
-                osc.frequency.setValueAtTime(300, now);
-                osc.frequency.exponentialRampToValueAtTime(600, now + 0.4);
-                gain.gain.setValueAtTime(0.3, now);
-                gain.gain.linearRampToValueAtTime(0, now + 0.4);
-                osc.start(); osc.stop(now + 0.4);
-            } else if (type === 'win') {
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(400, now);
-                osc.frequency.setValueAtTime(600, now + 0.1);
-                osc.frequency.setValueAtTime(800, now + 0.2);
-                gain.gain.setValueAtTime(0.3, now);
-                gain.gain.linearRampToValueAtTime(0, now + 1.0);
-                osc.start(); osc.stop(now + 1.0);
-            }
-        }
-
-        // --- PHYSICS SETUP ---
-        const Engine = Matter.Engine, Render = Matter.Render, Runner = Matter.Runner,
-              Bodies = Matter.Bodies, Composite = Matter.Composite, Body = Matter.Body;
-
-        let engine, runner, canvas, ctx;
-        let balls = [];
-        let userImages = [];
-        let isRaceActive = false;
+        // --- GLOBALS ---
+        let app, engine, world, runner; // Pixi app, Matter engine
+        let marbles = [];
+        let trackPieces = [];
+        let userPhotos = [];
+        let gameState = 'start'; // start, racing, finished
         let cameraY = 0;
-        let width = window.innerWidth;
-        let height = window.innerHeight;
+        let finishLineY = 0;
+        const W = window.innerWidth;
+        const H = window.innerHeight;
 
-        // CONFIG
-        const ballRadius = 16;
-        const gravityY = 0.5; // Чуть больше гравитации, чтобы давили друг на друга
-        
-        // --- UPLOAD ---
-        document.getElementById('photo-upload').addEventListener('change', function(e) {
-            const files = e.target.files;
-            const area = document.getElementById('preview-area');
-            area.innerHTML = ''; userImages = [];
-            Array.from(files).forEach(file => {
+        // --- ASSET GENERATION (Procedural Textures) ---
+        function createAsphaltTexture() {
+            const c = document.createElement('canvas'); c.width = 256; c.height = 256; const ctx = c.getContext('2d');
+            ctx.fillStyle = '#333'; ctx.fillRect(0,0,256,256);
+            // Noise
+            for(let i=0; i<5000; i++) {
+                const v = Math.random()*50; ctx.fillStyle = `rgba(${v},${v},${v},0.1)`;
+                ctx.fillRect(Math.random()*256, Math.random()*256, 2, 2);
+            }
+            return PIXI.Texture.from(c);
+        }
+        function createKerbTexture() {
+            const c = document.createElement('canvas'); c.width = 64; c.height = 64; const ctx = c.getContext('2d');
+            ctx.fillStyle = '#fff'; ctx.fillRect(0,0,64,64);
+            ctx.fillStyle = '#cc0000'; // Red stripes
+            ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(32,0); ctx.lineTo(64,32); ctx.lineTo(64,64); ctx.lineTo(32,64); ctx.lineTo(0,32); ctx.closePath(); ctx.fill();
+            return PIXI.Texture.from(c);
+        }
+        // Generate textures once
+        const texAsphalt = createAsphaltTexture();
+        const texKerb = createKerbTexture();
+        // Glass shine overlay
+        const shineGr = new PIXI.Graphics();
+        shineGr.beginFill(0xffffff, 0.4); shineGr.drawCircle(-CONFIG.ballRadius/3, -CONFIG.ballRadius/3, CONFIG.ballRadius/2.5); shineGr.endFill();
+        const texShine = app ? app.renderer.generateTexture(shineGr) : null; // Will generate later
+
+        // --- UPLOAD HANDLING ---
+        document.getElementById('photo-upload').addEventListener('change', (e) => {
+            const files = e.target.files; const box = document.getElementById('preview-box'); box.innerHTML=''; userPhotos=[];
+            Array.from(files).forEach(f => {
                 const reader = new FileReader();
                 reader.onload = (ev) => {
-                    const img = new Image(); img.src = ev.target.result;
-                    userImages.push(img);
-                    const t = document.createElement('img'); t.src = ev.target.result; t.className='preview-img'; area.appendChild(t);
-                };
-                reader.readAsDataURL(file);
+                    const img = new Image(); img.src = ev.target.result; userPhotos.push(img);
+                    const prev = document.createElement('img'); prev.src=ev.target.result; prev.className='preview-img'; box.appendChild(prev);
+                }
+                reader.readAsDataURL(f);
             });
         });
 
-        function init() {
-            engine = Engine.create();
-            engine.world.gravity.y = gravityY;
-            canvas = document.createElement('canvas');
-            canvas.width = width; canvas.height = height;
-            document.getElementById('game-container').appendChild(canvas);
-            ctx = canvas.getContext('2d');
-            runner = Runner.create();
-        }
-
-        // --- TRACK GENERATOR (ANTI-JAM VERSION) ---
-        function createTrack() {
-            const world = engine.world;
-            let currentY = 150;
-            let side = 1;
-
-            const createWall = (x, y, w, h, angle, color) => {
-                return Bodies.rectangle(x, y, w, h, {
-                    isStatic: true, angle: angle,
-                    friction: 0, // SLIPPERY WALLS
-                    render: { fillStyle: color, strokeStyle: '#2C3E50', lineWidth: 4 },
-                    chamfer: { radius: 5 }
-                });
-            };
-
-            // Start Funnel - WIDE
-            Composite.add(world, [
-                createWall(width*0.2, currentY, width*0.5, 20, Math.PI/5, '#4ECDC4'),
-                createWall(width*0.8, currentY, width*0.5, 20, -Math.PI/5, '#4ECDC4')
-            ]);
-            currentY += 350;
-
-            for (let i = 0; i < 10; i++) {
-                const type = i % 3;
-                const color = ['#FF6B6B', '#FFE66D', '#4ECDC4'][i%3];
-                
-                if (type === 0) { // Slopes
-                    const w = width * 0.8;
-                    const x = width/2 + (width*0.1 * -side);
-                    Composite.add(world, createWall(x, currentY, w, 20, 0.2 * side, color));
-                    currentY += 300;
-                } 
-                else if (type === 1) { // The Funnel (Problem Area Fixed)
-                    // Make gap explicitly wide (3.5 balls wide)
-                    const gap = ballRadius * 3.5; 
-                    const funnelH = 250;
-                    
-                    // Left wall
-                    Composite.add(world, createWall(width/2 - 250, currentY, 400, 20, Math.PI/5, color));
-                    // Right wall
-                    Composite.add(world, createWall(width/2 + 250, currentY, 400, 20, -Math.PI/5, color));
-                    
-                    // Vertical chutes to guide them straight down (prevents wedging)
-                    Composite.add(world, createWall(width/2 - gap - 10, currentY + 160, 20, 100, 0, color));
-                    Composite.add(world, createWall(width/2 + gap + 10, currentY + 160, 20, 100, 0, color));
-
-                    // Add a Spinner in the middle to mix them up
-                    const spinner = Bodies.rectangle(width/2, currentY + 50, 150, 20, { 
-                        render: { fillStyle: '#FFF' }, friction: 0 
-                    });
-                    const constraint = Matter.Constraint.create({
-                        pointA: { x: width/2, y: currentY + 50 }, bodyB: spinner, length: 0, stiffness: 0.9
-                    });
-                    Composite.add(world, [spinner, constraint]);
-
-                    currentY += 450;
-                }
-                else { // Pins/Bumpers (Plinko)
-                   const rows = 4;
-                   Composite.add(world, createWall(width/2, currentY + 150, width, 20, 0.1 * side, color)); // Floor
-                   for(let r=0; r<rows; r++) {
-                       for(let c=0; c<6; c++) {
-                           const bx = (width/2 - 200) + c * 80 + (r%2==0?40:0);
-                           const by = currentY + r * 60 - 50;
-                           Composite.add(world, Bodies.circle(bx, by, 10, { isStatic: true, render: { fillStyle: '#fff' }, friction:0 }));
-                       }
-                   }
-                   currentY += 400;
-                }
-                side *= -1;
-            }
-
-            // Finish
-            trackLength = currentY + 200;
-            Composite.add(world, Bodies.rectangle(width/2, trackLength, width, 100, { isStatic: true, label: 'finish' }));
-        }
-        let trackLength = 0;
-
-        // --- ANT-JAM SYSTEM ---
-        // Every 500ms, check for lazy balls
-        setInterval(() => {
-            if(!isRaceActive) return;
-            balls.forEach(b => {
-                // If ball is slow AND not at finish line
-                if (b.speed < 0.3 && b.position.y < trackLength - 200) {
-                    // Apply a tiny random nudge
-                    Body.setVelocity(b, {
-                        x: (Math.random() - 0.5) * 3,
-                        y: -2 // Pop up slightly
-                    });
-                }
-            });
-        }, 500);
-
-        function startGame() {
-            const count = parseInt(document.getElementById('ball-count').value);
+        // --- GAME INITIALIZATION ---
+        function initGame() {
             document.getElementById('start-screen').classList.add('hidden');
             document.getElementById('hud').classList.remove('hidden');
-            init();
-            createTrack();
-            playSound('start');
+            gameState = 'racing';
 
-            for (let i = 0; i < count; i++) {
-                setTimeout(() => { // Spawn with slight delay to reduce initial stack
-                    const x = width/2 + (Math.random()*40 - 20);
-                    const y = -50;
-                    const img = userImages.length ? userImages[i % userImages.length] : null;
-                    const color = `hsl(${Math.random()*360}, 80%, 70%)`;
-                    
-                    const ball = Bodies.circle(x, y, ballRadius, {
-                        restitution: 0.6, // Bouncier
-                        friction: 0.001, // Ice-like friction
-                        frictionStatic: 0, // NO STICKING
-                        frictionAir: 0.01,
-                        density: 0.05,
-                        label: 'marble',
-                        render: { fillStyle: color }
-                    });
-                    ball.customId = i+1; ball.customImg = img; ball.customColor = color;
-                    balls.push(ball);
-                    Composite.add(engine.world, ball);
-                }, i * 50);
-            }
-            isRaceActive = true;
-            Runner.run(runner, engine);
-            requestAnimationFrame(gameLoop);
+            // 1. Setup Pixi (Graphics)
+            app = new PIXI.Application({ width: W, height: H, backgroundColor: CONFIG.bgColor, antialias: true, resolution: window.devicePixelRatio || 1 });
+            document.body.appendChild(app.view);
+            app.stage.sortableChildren = true;
+
+            // 2. Setup Matter (Physics)
+            engine = Matter.Engine.create();
+            world = engine.world;
+            world.gravity.y = CONFIG.gravity;
+            runner = Matter.Runner.create({isFixed: true}); // Fixed timestep for stability
+
+            // 3. Build World
+            buildRealisticTrack();
+            spawnMarbles();
+
+            // 4. Start Loop
+            Matter.Runner.run(runner, engine);
+            app.ticker.add(gameLoop);
         }
 
-        // --- RENDER ---
-        function draw() {
-            // Camera
-            let leadY = -Infinity; let leaderName = "";
-            balls.forEach(b => { if(b.position.y > leadY) { leadY = b.position.y; leaderName="#"+b.customId; }});
-            if(leaderName) document.getElementById('leader-name').innerText = leaderName;
+        // --- TRACK BUILDER (The complex part) ---
+        function buildRealisticTrack() {
+            const trackContainer = new PIXI.Container(); trackContainer.zIndex = 1;
+            app.stage.addChild(trackContainer);
+            
+            let curX = W/2; let curY = 200;
 
-            let targetY = -leadY + height * 0.6;
-            if(targetY > 100) targetY = 100;
-            if(targetY < -(trackLength - height + 100)) targetY = -(trackLength - height + 100);
-            cameraY += (targetY - cameraY) * 0.1;
-
-            ctx.clearRect(0,0,width,height);
-            ctx.save();
-            ctx.translate(0, cameraY);
-
-            Composite.allBodies(engine.world).forEach(b => {
-                if(b.position.y+cameraY < -200 || b.position.y+cameraY > height+200) return;
+            // Helper to create a track segment
+            function addSegment(x, y, w, h, angle, isTurn=false) {
+                // 1. Physics Body (The actual floor)
+                const floor = Matter.Bodies.rectangle(x, y, w, h, {
+                    isStatic: true, angle: angle, friction: CONFIG.trackFriction, label: 'track'
+                });
                 
-                ctx.beginPath();
-                b.vertices.forEach((v,i) => i==0?ctx.moveTo(v.x,v.y):ctx.lineTo(v.x,v.y));
-                ctx.closePath();
+                // 2. Pixi Graphics (Asphalt)
+                const sprite = new PIXI.TilingSprite(texAsphalt, w, h);
+                sprite.anchor.set(0.5); sprite.position.set(x, y); sprite.rotation = angle;
+                trackContainer.addChild(sprite);
 
-                if(b.label === 'marble') {
-                    ctx.save();
-                    ctx.translate(b.position.x, b.position.y);
-                    ctx.rotate(b.angle);
-                    ctx.beginPath(); ctx.arc(0,0,ballRadius,0,Math.PI*2); ctx.clip();
-                    if(b.customImg) ctx.drawImage(b.customImg, -ballRadius, -ballRadius, ballRadius*2, ballRadius*2);
-                    else {
-                        ctx.fillStyle = b.customColor; ctx.fill();
-                        ctx.fillStyle = "white"; ctx.font="12px Arial"; ctx.textAlign="center"; ctx.fillText(b.customId, 0, 4);
-                    }
-                    // Shine
-                    ctx.beginPath(); ctx.arc(-5,-5, 5, 0, Math.PI*2); ctx.fillStyle="rgba(255,255,255,0.4)"; ctx.fill();
-                    ctx.restore();
+                // 3. Walls/Kerbs (Visual + Physics)
+                const wallThickness = 30;
+                // Left Kerb
+                const leftWallBody = Matter.Bodies.rectangle(
+                    x - (w/2 + wallThickness/2) * Math.cos(angle),
+                    y - (w/2 + wallThickness/2) * Math.sin(angle),
+                    wallThickness, h, { isStatic: true, angle: angle, friction: 0, label: 'wall' }
+                );
+                const leftKerbSprite = new PIXI.TilingSprite(texKerb, wallThickness, h);
+                leftKerbSprite.anchor.set(0.5);
+                leftKerbSprite.position.set(leftWallBody.position.x, leftWallBody.position.y);
+                leftKerbSprite.rotation = angle;
+                // Offset vertically to look 3D
+                leftKerbSprite.y -= 10; 
+                
+                // Right Kerb
+                const rightWallBody = Matter.Bodies.rectangle(
+                    x + (w/2 + wallThickness/2) * Math.cos(angle),
+                    y + (w/2 + wallThickness/2) * Math.sin(angle),
+                    wallThickness, h, { isStatic: true, angle: angle, friction: 0, label: 'wall' }
+                );
+                 const rightKerbSprite = new PIXI.TilingSprite(texKerb, wallThickness, h);
+                rightKerbSprite.anchor.set(0.5);
+                rightKerbSprite.position.set(rightWallBody.position.x, rightWallBody.position.y);
+                rightKerbSprite.rotation = angle;
+                rightKerbSprite.y -= 10;
+
+                trackContainer.addChild(leftKerbSprite, rightKerbSprite);
+                Matter.World.add(world, [floor, leftWallBody, rightWallBody]);
+                trackPieces.push(sprite, leftKerbSprite, rightKerbSprite); // Store for culling if needed
+
+                // Calculate next start position based on segment end
+                curX = x + (h/2) * Math.sin(angle);
+                curY = y + (h/2) * Math.cos(angle);
+            }
+
+            // --- DEFINING THE COURSE PATH ---
+            // Start Ramp
+            addSegment(curX, curY, CONFIG.trackWidth, 800, Math.PI/8); 
+            
+            // Turn 1 (Approximation with angled segments)
+            addSegment(curX+100, curY+50, CONFIG.trackWidth, 300, Math.PI/12);
+            addSegment(curX+100, curY+50, CONFIG.trackWidth, 300, -Math.PI/16);
+             addSegment(curX+50, curY+100, CONFIG.trackWidth, 300, -Math.PI/8);
+
+            // Long straight back
+            addSegment(curX, curY+200, CONFIG.trackWidth, 1200, -Math.PI/10);
+
+             // Turn 2
+            addSegment(curX-100, curY+50, CONFIG.trackWidth, 400, 0);
+            addSegment(curX-100, curY+100, CONFIG.trackWidth, 400, Math.PI/10);
+
+            // Final stretch
+            addSegment(curX, curY+300, CONFIG.trackWidth, 1500, Math.PI/6);
+
+            // Finish Line Sensor
+            finishLineY = curY;
+            const finishSensor = Matter.Bodies.rectangle(curX, finishLineY, CONFIG.trackWidth*1.5, 50, { isStatic: true, isSensor: true, label: 'finish' });
+            
+            // Finish graphics (checkered)
+            const finishGr = new PIXI.Graphics();
+            finishGr.beginFill(0xFFFFFF); finishGr.drawRect(-CONFIG.trackWidth/2, -50, CONFIG.trackWidth, 100);
+            for(let i=0; i<CONFIG.trackWidth/40; i++) for(let j=0; j<2; j++) {
+                if((i+j)%2==0) finishGr.beginFill(0x000000); else finishGr.beginFill(0xFFFFFF);
+                finishGr.drawRect(-CONFIG.trackWidth/2 + i*40, -50 + j*50, 40, 50);
+            }
+            finishGr.position.set(curX, finishLineY); finishGr.rotation = Math.PI/6;
+            trackContainer.addChild(finishGr);
+            Matter.World.add(world, finishSensor);
+
+            // Starting Gate
+            const gate = Matter.Bodies.rectangle(W/2, 300, CONFIG.trackWidth, 40, { isStatic: true, render: {fillStyle: 'red'} });
+            Matter.World.add(world, gate);
+            // Open gate after 2 seconds
+            setTimeout(() => { Matter.World.remove(world, gate); }, 2000);
+        }
+
+        // --- MARBLE SPAWNER ---
+        function spawnMarbles() {
+            const count = parseInt(document.getElementById('ball-count').value) || 20;
+            const marbleContainer = new PIXI.Container(); marbleContainer.zIndex = 10;
+            app.stage.addChild(marbleContainer);
+
+            for(let i=0; i<count; i++) {
+                // 1. Physics Body
+                // Spread out start positions to prevent instant stacking
+                const startX = W/2 + (Math.random() * CONFIG.trackWidth*0.6 - CONFIG.trackWidth*0.3);
+                const startY = 100 - (Math.floor(i/5) * CONFIG.ballRadius*2.5); 
+                
+                const body = Matter.Bodies.circle(startX, startY, CONFIG.ballRadius, {
+                    restitution: CONFIG.ballRestitution,
+                    friction: CONFIG.ballFriction,
+                    frictionAir: 0.005, // Low air friction for speed
+                    density: 0.01,
+                    label: 'marble'
+                });
+                body.marbleId = i+1;
+
+                // 2. Pixi Visuals (Container for layers)
+                const view = new PIXI.Container();
+                
+                // Base color circle
+                const color = 0xffffff * Math.random();
+                const baseGr = new PIXI.Graphics(); baseGr.beginFill(color); baseGr.drawCircle(0,0,CONFIG.ballRadius); baseGr.endFill();
+                view.addChild(baseGr);
+
+                // User Photo Texture (masked)
+                if(userPhotos.length > 0) {
+                    const img = userPhotos[i % userPhotos.length];
+                    const texture = PIXI.Texture.from(img);
+                    const sprite = new PIXI.Sprite(texture);
+                    sprite.width = sprite.height = CONFIG.ballRadius * 2;
+                    sprite.anchor.set(0.5);
                     
-                    if(b.position.y > trackLength - 100) endGame(b);
-                } else {
-                    ctx.fillStyle = b.render.fillStyle; ctx.fill();
-                    ctx.strokeStyle = b.render.strokeStyle; ctx.lineWidth=3; ctx.stroke();
+                    const mask = new PIXI.Graphics(); mask.beginFill(0xffffff); mask.drawCircle(0,0,CONFIG.ballRadius); mask.endFill();
+                    sprite.mask = mask;
+                    view.addChild(mask, sprite);
+                }
+
+                // Shine Overlay (Realism trick)
+                const shine = new PIXI.Graphics();
+                shine.beginFill(0xffffff, 0.3); shine.drawEllipse(-CONFIG.ballRadius*0.3, -CONFIG.ballRadius*0.3, CONFIG.ballRadius*0.5, CONFIG.ballRadius*0.3); shine.endFill();
+                shine.rotation = -Math.PI/4;
+                view.addChild(shine);
+
+                marbleContainer.addChild(view);
+                marbles.push({ body: body, view: view, id: i+1, photo: userPhotos[i % userPhotos.length] || null });
+                Matter.World.add(world, body);
+            }
+        }
+
+        // --- MAIN LOOP ---
+        function gameLoop(delta) {
+            if(gameState !== 'racing') return;
+
+            // 1. Sync Physics to Graphics & Find Leader
+            let leaderY = -Infinity; let leaderMarble = null;
+
+            marbles.forEach(m => {
+                m.view.position.copyFrom(m.body.position);
+                m.view.rotation = m.body.angle;
+                
+                if(m.body.position.y > leaderY) {
+                    leaderY = m.body.position.y;
+                    leaderMarble = m;
+                }
+
+                // Check Finish
+                if(m.body.position.y > finishLineY + CONFIG.ballRadius*2 && gameState === 'racing') {
+                    finishGame(m);
                 }
             });
-            ctx.restore();
+
+            if(leaderMarble) document.getElementById('leader-name').innerText = "MARBLE " + leaderMarble.id;
+
+            // 2. Camera Follow (Smooth Lerp)
+            let targetY = -leaderY + H * 0.6;
+            // Limits
+            if(targetY > 0) targetY = 0;
+            // Prevent seeing past finish too much
+            const minY = -finishLineY + H/2;
+            if(targetY < minY) targetY = minY;
+            
+            cameraY += (targetY - cameraY) * 0.1;
+            app.stage.position.y = cameraY;
         }
 
-        function endGame(winner) {
-            if(!isRaceActive) return;
-            isRaceActive = false;
-            playSound('win');
-            document.getElementById('winner-screen').classList.remove('hidden');
+        function finishGame(winner) {
+            gameState = 'finished';
             document.getElementById('hud').classList.add('hidden');
-            const img = document.getElementById('winner-avatar');
-            if(winner.customImg) img.src = winner.customImg.src;
-            else { img.src = ""; img.style.background = winner.customColor; }
-            document.getElementById('winner-text').innerText = "Мрамор #" + winner.customId;
-            Runner.stop(runner);
-        }
+            const winScreen = document.getElementById('winner-screen');
+            winScreen.classList.remove('hidden');
+            
+            document.getElementById('winner-text').innerText = "MARBLE " + winner.id;
+            const avatar = document.getElementById('winner-avatar');
+            if(winner.photo) {
+                avatar.src = winner.photo.src;
+            } else {
+                // Create a placeholder if no photo
+                avatar.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=';
+                avatar.style.background = '#' + winner.view.children[0].tint.toString(16);
+            }
 
-        function gameLoop() {
-            if(!isRaceActive) return;
-            draw();
-            requestAnimationFrame(gameLoop);
+            // Slow motion finish effect
+            engine.timing.timeScale = 0.2;
+            setTimeout(() => { Matter.Runner.stop(runner); }, 2000);
         }
     </script>
 </body>
