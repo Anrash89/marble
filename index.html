@@ -2,379 +2,317 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Marbula Pro Racing</title>
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Цены на расклейку объявлений - Billposter</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+        /* Основные переменные цветов из стиля постера */
+        :root {
+            --bg-blue: #a8d3e6;
+            --container-yellow: #f9e79f;
+            --border-gold: #d4ac0d;
+            --text-dark-blue: #2c3e50;
+            --text-orange: #d35400;
+            --white: #ffffff;
+        }
 
-        :root { --primary: #ff3333; --dark: #111; --ui-bg: rgba(20, 20, 30, 0.95); }
-        body { margin: 0; overflow: hidden; background: #0a0a0a; font-family: 'Orbitron', sans-serif; color: white; }
-        canvas { display: block; }
+        body {
+            font-family: 'Roboto', Arial, sans-serif;
+            background-color: var(--bg-blue);
+            color: var(--text-dark-blue);
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+        }
 
-        /* UI STYLES */
-        .ui-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: var(--ui-bg); z-index: 100; transition: all 0.5s; backdrop-filter: blur(10px); }
-        .hidden { opacity: 0; pointer-events: none; transform: scale(1.1); }
-        
-        h1 { font-size: 4rem; text-transform: uppercase; letter-spacing: 5px; margin-bottom: 30px; text-shadow: 0 0 20px var(--primary); background: linear-gradient(45deg, #fff, var(--primary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        
-        .panel { background: rgba(255,255,255,0.05); padding: 40px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.5); max-width: 600px; width: 90%; }
-        
-        .control-group { margin-bottom: 25px; }
-        label { display: block; margin-bottom: 10px; font-weight: 700; letter-spacing: 2px; color: #aaa; }
-        input[type=number] { background: #222; border: 2px solid #444; color: var(--primary); font-family: 'Orbitron'; font-size: 2rem; padding: 10px; width: 120px; text-align: center; border-radius: 5px; outline: none; }
-        input[type=number]:focus { border-color: var(--primary); }
+        /* Шапка сайта (простая имитация) */
+        header {
+            background-color: rgba(44, 62, 80, 0.1);
+            padding: 20px 0;
+            border-bottom: 2px solid var(--border-gold);
+        }
 
-        .custom-file-upload { display: inline-block; padding: 15px 30px; background: #333; color: #fff; border-radius: 5px; cursor: pointer; transition: 0.3s; border: 2px solid #444; font-weight: bold; letter-spacing: 1px; }
-        .custom-file-upload:hover { background: var(--primary); border-color: var(--primary); color: #000; }
-        #photo-upload { display: none; }
+        .header-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+        }
 
-        .preview-area { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 20px; max-height: 150px; overflow-y: auto; }
-        .preview-img { width: 50px; height: 50px; border-radius: 50%; border: 2px solid var(--primary); object-fit: cover; }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--text-dark-blue);
+            text-transform: uppercase;
+        }
 
-        .btn-start { background: linear-gradient(45deg, var(--primary), #ff6600); border: none; padding: 20px 60px; font-size: 2rem; color: white; font-family: 'Orbitron'; font-weight: 900; text-transform: uppercase; letter-spacing: 3px; cursor: pointer; clip-path: polygon(10% 0, 100% 0, 90% 100%, 0 100%); transition: 0.3s; margin-top: 30px; }
-        .btn-start:hover { transform: scale(1.05); box-shadow: 0 0 30px var(--primary); }
+        .logo span {
+            color: var(--text-orange);
+        }
 
-        #hud { position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.7); padding: 15px 30px; border-left: 5px solid var(--primary); clip-path: polygon(0 0, 100% 0, 95% 100%, 0 100%); }
-        #hud div { font-size: 1.2rem;color:#ccc; }
-        #leader-name { font-size: 2rem; font-weight: 900; color: var(--primary); }
+        nav a {
+            text-decoration: none;
+            color: var(--text-dark-blue);
+            margin-left: 20px;
+            font-weight: 500;
+        }
 
-        /* Winner */
-        #winner-card { background: linear-gradient(135deg, #222, #111); padding: 50px; border-radius: 20px; border: 3px solid var(--primary); text-align: center; box-shadow: 0 0 100px rgba(255,50,50,0.5); }
-        #winner-avatar { width: 200px; height: 200px; border-radius: 50%; border: 8px solid var(--primary); box-shadow: 0 0 50px var(--primary); object-fit: cover; background: #fff;}
+        nav a:hover {
+            color: var(--text-orange);
+        }
+
+        .phone {
+            font-weight: bold;
+            color: var(--text-dark-blue);
+        }
+
+        /* Основной контент */
+        main {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            color: var(--text-dark-blue);
+            text-transform: uppercase;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 1.2em;
+            margin-bottom: 40px;
+            color: var(--text-dark-blue);
+        }
+
+        /* Стилизация контейнеров с таблицами под "золотые" блоки */
+        .pricing-block {
+            background-color: var(--container-yellow);
+            border: 3px solid var(--border-gold);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 40px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            color: var(--text-dark-blue);
+            border-bottom: 2px solid var(--border-gold);
+            padding-bottom: 15px;
+            margin-top: 0;
+            margin-bottom: 25px;
+        }
+
+        /* Стили таблиц */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 15px;
+            border-bottom: 1px solid rgba(212, 172, 13, 0.3); /* Светло-золотой разделитель */
+        }
+
+        th {
+            background-color: rgba(212, 172, 13, 0.2); /* Легкий золотистый фон для заголовков */
+            color: var(--text-dark-blue);
+            font-weight: bold;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .price {
+            font-weight: bold;
+            color: var(--text-orange);
+        }
+
+        /* Дополнительные услуги в виде списка */
+        .services-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .services-list li {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px 0;
+            border-bottom: 1px solid rgba(212, 172, 13, 0.3);
+        }
+
+        .services-list li:last-child {
+            border-bottom: none;
+        }
+
+        .service-name {
+            font-weight: 500;
+        }
+
+        /* Футер */
+        footer {
+            background-color: var(--text-dark-blue);
+            color: var(--white);
+            padding: 30px 0;
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        footer p {
+            margin: 10px 0;
+        }
+
+        footer a {
+            color: var(--container-yellow);
+            text-decoration: none;
+        }
     </style>
 </head>
 <body>
 
-    <div id="start-screen" class="ui-screen">
-        <h1>Marbula Pro Racing</h1>
-        <div class="panel">
-            <div class="control-group">
-                <label>RACERS COUNT</label>
-                <input type="number" id="ball-count" value="20" min="2" max="100">
-            </div>
-            <div class="control-group">
-                <label>UPLOAD SKINS (OPTIONAL)</label>
-                <label for="photo-upload" class="custom-file-upload">CHOOSE PHOTOS 📁</label>
-                <input type="file" id="photo-upload" accept="image/*" multiple>
-                <div class="preview-area" id="preview-box"></div>
-            </div>
+    <header>
+        <div class="header-container">
+            <div class="logo">bill<span>poster</span><br><small>НОВОСИБИРСК</small></div>
+            <nav>
+                <a href="#">Главная</a>
+                <a href="#">Цены</a>
+                <a href="#">О нас</a>
+                <a href="#">Контакты</a>
+            </nav>
+            <div class="phone">+7 (383) 380-24-35</div>
         </div>
-        <button class="btn-start" onclick="initGame()">START RACE</button>
-    </div>
+    </header>
 
-    <div id="hud" class="hidden">
-        <div>LEADER</div>
-        <div id="leader-name">---</div>
-    </div>
+    <main>
+        <h1>Цены на расклейку объявлений</h1>
+        <p class="subtitle">Прозрачное ценообразование и полный цикл услуг для вашего бизнеса.</p>
 
-    <div id="winner-screen" class="ui-screen hidden">
-        <div id="winner-card">
-            <h1 style="margin-bottom: 10px;">WINNER!</h1>
-            <img id="winner-avatar" src="">
-            <h2 id="winner-text" style="font-size: 3rem; color: var(--primary); margin: 20px 0;"></h2>
-            <button class="btn-start" style="font-size: 1.5rem; padding: 15px 40px;" onclick="location.reload()">RESTART</button>
-        </div>
-    </div>
+        <section class="pricing-block">
+            <h2>Расклейка по подъездам (на доски объявлений)</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Формат</th>
+                        <th>Тираж (шт.)</th>
+                        <th>Цена за шт.</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>А6, А5</td>
+                        <td>до 1 000</td>
+                        <td class="price">от 2,50 руб.</td>
+                    </tr>
+                    <tr>
+                        <td>А6, А5</td>
+                        <td>от 1 000 до 5 000</td>
+                        <td class="price">от 2,20 руб.</td>
+                    </tr>
+                    <tr>
+                        <td>А6, А5</td>
+                        <td>от 5 000 до 10 000</td>
+                        <td class="price">от 1,90 руб.</td>
+                    </tr>
+                    <tr>
+                        <td>А6, А5</td>
+                        <td>свыше 10 000</td>
+                        <td class="price">от 1,70 руб.</td>
+                    </tr>
+                     <tr>
+                        <td>А4</td>
+                        <td>любой</td>
+                        <td class="price">+ 50 коп. к цене</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
 
-    <script>
-        // --- CONFIGURATION ---
-        const CONFIG = {
-            trackWidth: 380,    // Широкая трасса как на фото
-            ballRadius: 22,     // Крупные шарики
-            wallHeight: 60,     // Высота бортиков
-            gravity: 1.2,       // Сильная гравитация для скорости
-            trackFriction: 0.02,// Трение асфальта
-            ballFriction: 0.01, // Трение шарика (качение)
-            ballRestitution: 0.4, // Упругость
-            bgColor: 0x1a1a1a
-        };
+        <section class="pricing-block">
+            <h2>Расклейка по этажам (возле квартир)</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Формат</th>
+                        <th>Тираж (шт.)</th>
+                        <th>Цена за шт.</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>А6, А5</td>
+                        <td>до 3 000</td>
+                        <td class="price">от 4,00 руб.</td>
+                    </tr>
+                    <tr>
+                        <td>А6, А5</td>
+                        <td>от 3 000 до 10 000</td>
+                        <td class="price">от 3,50 руб.</td>
+                    </tr>
+                    <tr>
+                        <td>А6, А5</td>
+                        <td>свыше 10 000</td>
+                        <td class="price">от 3,00 руб.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
 
-        // --- GLOBALS ---
-        let app, engine, world, runner; // Pixi app, Matter engine
-        let marbles = [];
-        let trackPieces = [];
-        let userPhotos = [];
-        let gameState = 'start'; // start, racing, finished
-        let cameraY = 0;
-        let finishLineY = 0;
-        const W = window.innerWidth;
-        const H = window.innerHeight;
+        <section class="pricing-block">
+            <h2>Расклейка в частном секторе</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Формат</th>
+                        <th>Тираж (шт.)</th>
+                        <th>Цена за шт.</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>А6, А5</td>
+                        <td>любой</td>
+                        <td class="price">от 5,00 руб.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
 
-        // --- ASSET GENERATION (Procedural Textures) ---
-        function createAsphaltTexture() {
-            const c = document.createElement('canvas'); c.width = 256; c.height = 256; const ctx = c.getContext('2d');
-            ctx.fillStyle = '#333'; ctx.fillRect(0,0,256,256);
-            // Noise
-            for(let i=0; i<5000; i++) {
-                const v = Math.random()*50; ctx.fillStyle = `rgba(${v},${v},${v},0.1)`;
-                ctx.fillRect(Math.random()*256, Math.random()*256, 2, 2);
-            }
-            return PIXI.Texture.from(c);
-        }
-        function createKerbTexture() {
-            const c = document.createElement('canvas'); c.width = 64; c.height = 64; const ctx = c.getContext('2d');
-            ctx.fillStyle = '#fff'; ctx.fillRect(0,0,64,64);
-            ctx.fillStyle = '#cc0000'; // Red stripes
-            ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(32,0); ctx.lineTo(64,32); ctx.lineTo(64,64); ctx.lineTo(32,64); ctx.lineTo(0,32); ctx.closePath(); ctx.fill();
-            return PIXI.Texture.from(c);
-        }
-        // Generate textures once
-        const texAsphalt = createAsphaltTexture();
-        const texKerb = createKerbTexture();
-        // Glass shine overlay
-        const shineGr = new PIXI.Graphics();
-        shineGr.beginFill(0xffffff, 0.4); shineGr.drawCircle(-CONFIG.ballRadius/3, -CONFIG.ballRadius/3, CONFIG.ballRadius/2.5); shineGr.endFill();
-        const texShine = app ? app.renderer.generateTexture(shineGr) : null; // Will generate later
+        <section class="pricing-block">
+            <h2>Дополнительные услуги (Дизайн и Печать)</h2>
+            <ul class="services-list">
+                <li>
+                    <span class="service-name">Разработка дизайн-макета объявления</span>
+                    <span class="price">от 500 руб.</span>
+                </li>
+                <li>
+                    <span class="service-name">Печать объявлений (ч/б, на цветной бумаге)</span>
+                    <span class="price">от 1,00 руб./шт.</span>
+                </li>
+                <li>
+                    <span class="service-name">Печать объявлений (полноцветная)</span>
+                    <span class="price">по запросу</span>
+                </li>
+                <li>
+                    <span class="service-name">Фотоотчет о проделанной работе (до 100%)</span>
+                    <span class="price">БЕСПЛАТНО</span>
+                </li>
+            </ul>
+        </section>
 
-        // --- UPLOAD HANDLING ---
-        document.getElementById('photo-upload').addEventListener('change', (e) => {
-            const files = e.target.files; const box = document.getElementById('preview-box'); box.innerHTML=''; userPhotos=[];
-            Array.from(files).forEach(f => {
-                const reader = new FileReader();
-                reader.onload = (ev) => {
-                    const img = new Image(); img.src = ev.target.result; userPhotos.push(img);
-                    const prev = document.createElement('img'); prev.src=ev.target.result; prev.className='preview-img'; box.appendChild(prev);
-                }
-                reader.readAsDataURL(f);
-            });
-        });
+    </main>
 
-        // --- GAME INITIALIZATION ---
-        function initGame() {
-            document.getElementById('start-screen').classList.add('hidden');
-            document.getElementById('hud').classList.remove('hidden');
-            gameState = 'racing';
+    <footer>
+        <p>© 2023 РА «БиллПостер». Все права защищены.</p>
+        <p>Новосибирск, ул. Кавалерийская 2, офис 13</p>
+        <p>Телефон: <a href="tel:+73833802435">+7 (383) 380-24-35</a> | Email: <a href="mailto:ra@bill-poster.ru">ra@bill-poster.ru</a></p>
+    </footer>
 
-            // 1. Setup Pixi (Graphics)
-            app = new PIXI.Application({ width: W, height: H, backgroundColor: CONFIG.bgColor, antialias: true, resolution: window.devicePixelRatio || 1 });
-            document.body.appendChild(app.view);
-            app.stage.sortableChildren = true;
-
-            // 2. Setup Matter (Physics)
-            engine = Matter.Engine.create();
-            world = engine.world;
-            world.gravity.y = CONFIG.gravity;
-            runner = Matter.Runner.create({isFixed: true}); // Fixed timestep for stability
-
-            // 3. Build World
-            buildRealisticTrack();
-            spawnMarbles();
-
-            // 4. Start Loop
-            Matter.Runner.run(runner, engine);
-            app.ticker.add(gameLoop);
-        }
-
-        // --- TRACK BUILDER (The complex part) ---
-        function buildRealisticTrack() {
-            const trackContainer = new PIXI.Container(); trackContainer.zIndex = 1;
-            app.stage.addChild(trackContainer);
-            
-            let curX = W/2; let curY = 200;
-
-            // Helper to create a track segment
-            function addSegment(x, y, w, h, angle, isTurn=false) {
-                // 1. Physics Body (The actual floor)
-                const floor = Matter.Bodies.rectangle(x, y, w, h, {
-                    isStatic: true, angle: angle, friction: CONFIG.trackFriction, label: 'track'
-                });
-                
-                // 2. Pixi Graphics (Asphalt)
-                const sprite = new PIXI.TilingSprite(texAsphalt, w, h);
-                sprite.anchor.set(0.5); sprite.position.set(x, y); sprite.rotation = angle;
-                trackContainer.addChild(sprite);
-
-                // 3. Walls/Kerbs (Visual + Physics)
-                const wallThickness = 30;
-                // Left Kerb
-                const leftWallBody = Matter.Bodies.rectangle(
-                    x - (w/2 + wallThickness/2) * Math.cos(angle),
-                    y - (w/2 + wallThickness/2) * Math.sin(angle),
-                    wallThickness, h, { isStatic: true, angle: angle, friction: 0, label: 'wall' }
-                );
-                const leftKerbSprite = new PIXI.TilingSprite(texKerb, wallThickness, h);
-                leftKerbSprite.anchor.set(0.5);
-                leftKerbSprite.position.set(leftWallBody.position.x, leftWallBody.position.y);
-                leftKerbSprite.rotation = angle;
-                // Offset vertically to look 3D
-                leftKerbSprite.y -= 10; 
-                
-                // Right Kerb
-                const rightWallBody = Matter.Bodies.rectangle(
-                    x + (w/2 + wallThickness/2) * Math.cos(angle),
-                    y + (w/2 + wallThickness/2) * Math.sin(angle),
-                    wallThickness, h, { isStatic: true, angle: angle, friction: 0, label: 'wall' }
-                );
-                 const rightKerbSprite = new PIXI.TilingSprite(texKerb, wallThickness, h);
-                rightKerbSprite.anchor.set(0.5);
-                rightKerbSprite.position.set(rightWallBody.position.x, rightWallBody.position.y);
-                rightKerbSprite.rotation = angle;
-                rightKerbSprite.y -= 10;
-
-                trackContainer.addChild(leftKerbSprite, rightKerbSprite);
-                Matter.World.add(world, [floor, leftWallBody, rightWallBody]);
-                trackPieces.push(sprite, leftKerbSprite, rightKerbSprite); // Store for culling if needed
-
-                // Calculate next start position based on segment end
-                curX = x + (h/2) * Math.sin(angle);
-                curY = y + (h/2) * Math.cos(angle);
-            }
-
-            // --- DEFINING THE COURSE PATH ---
-            // Start Ramp
-            addSegment(curX, curY, CONFIG.trackWidth, 800, Math.PI/8); 
-            
-            // Turn 1 (Approximation with angled segments)
-            addSegment(curX+100, curY+50, CONFIG.trackWidth, 300, Math.PI/12);
-            addSegment(curX+100, curY+50, CONFIG.trackWidth, 300, -Math.PI/16);
-             addSegment(curX+50, curY+100, CONFIG.trackWidth, 300, -Math.PI/8);
-
-            // Long straight back
-            addSegment(curX, curY+200, CONFIG.trackWidth, 1200, -Math.PI/10);
-
-             // Turn 2
-            addSegment(curX-100, curY+50, CONFIG.trackWidth, 400, 0);
-            addSegment(curX-100, curY+100, CONFIG.trackWidth, 400, Math.PI/10);
-
-            // Final stretch
-            addSegment(curX, curY+300, CONFIG.trackWidth, 1500, Math.PI/6);
-
-            // Finish Line Sensor
-            finishLineY = curY;
-            const finishSensor = Matter.Bodies.rectangle(curX, finishLineY, CONFIG.trackWidth*1.5, 50, { isStatic: true, isSensor: true, label: 'finish' });
-            
-            // Finish graphics (checkered)
-            const finishGr = new PIXI.Graphics();
-            finishGr.beginFill(0xFFFFFF); finishGr.drawRect(-CONFIG.trackWidth/2, -50, CONFIG.trackWidth, 100);
-            for(let i=0; i<CONFIG.trackWidth/40; i++) for(let j=0; j<2; j++) {
-                if((i+j)%2==0) finishGr.beginFill(0x000000); else finishGr.beginFill(0xFFFFFF);
-                finishGr.drawRect(-CONFIG.trackWidth/2 + i*40, -50 + j*50, 40, 50);
-            }
-            finishGr.position.set(curX, finishLineY); finishGr.rotation = Math.PI/6;
-            trackContainer.addChild(finishGr);
-            Matter.World.add(world, finishSensor);
-
-            // Starting Gate
-            const gate = Matter.Bodies.rectangle(W/2, 300, CONFIG.trackWidth, 40, { isStatic: true, render: {fillStyle: 'red'} });
-            Matter.World.add(world, gate);
-            // Open gate after 2 seconds
-            setTimeout(() => { Matter.World.remove(world, gate); }, 2000);
-        }
-
-        // --- MARBLE SPAWNER ---
-        function spawnMarbles() {
-            const count = parseInt(document.getElementById('ball-count').value) || 20;
-            const marbleContainer = new PIXI.Container(); marbleContainer.zIndex = 10;
-            app.stage.addChild(marbleContainer);
-
-            for(let i=0; i<count; i++) {
-                // 1. Physics Body
-                // Spread out start positions to prevent instant stacking
-                const startX = W/2 + (Math.random() * CONFIG.trackWidth*0.6 - CONFIG.trackWidth*0.3);
-                const startY = 100 - (Math.floor(i/5) * CONFIG.ballRadius*2.5); 
-                
-                const body = Matter.Bodies.circle(startX, startY, CONFIG.ballRadius, {
-                    restitution: CONFIG.ballRestitution,
-                    friction: CONFIG.ballFriction,
-                    frictionAir: 0.005, // Low air friction for speed
-                    density: 0.01,
-                    label: 'marble'
-                });
-                body.marbleId = i+1;
-
-                // 2. Pixi Visuals (Container for layers)
-                const view = new PIXI.Container();
-                
-                // Base color circle
-                const color = 0xffffff * Math.random();
-                const baseGr = new PIXI.Graphics(); baseGr.beginFill(color); baseGr.drawCircle(0,0,CONFIG.ballRadius); baseGr.endFill();
-                view.addChild(baseGr);
-
-                // User Photo Texture (masked)
-                if(userPhotos.length > 0) {
-                    const img = userPhotos[i % userPhotos.length];
-                    const texture = PIXI.Texture.from(img);
-                    const sprite = new PIXI.Sprite(texture);
-                    sprite.width = sprite.height = CONFIG.ballRadius * 2;
-                    sprite.anchor.set(0.5);
-                    
-                    const mask = new PIXI.Graphics(); mask.beginFill(0xffffff); mask.drawCircle(0,0,CONFIG.ballRadius); mask.endFill();
-                    sprite.mask = mask;
-                    view.addChild(mask, sprite);
-                }
-
-                // Shine Overlay (Realism trick)
-                const shine = new PIXI.Graphics();
-                shine.beginFill(0xffffff, 0.3); shine.drawEllipse(-CONFIG.ballRadius*0.3, -CONFIG.ballRadius*0.3, CONFIG.ballRadius*0.5, CONFIG.ballRadius*0.3); shine.endFill();
-                shine.rotation = -Math.PI/4;
-                view.addChild(shine);
-
-                marbleContainer.addChild(view);
-                marbles.push({ body: body, view: view, id: i+1, photo: userPhotos[i % userPhotos.length] || null });
-                Matter.World.add(world, body);
-            }
-        }
-
-        // --- MAIN LOOP ---
-        function gameLoop(delta) {
-            if(gameState !== 'racing') return;
-
-            // 1. Sync Physics to Graphics & Find Leader
-            let leaderY = -Infinity; let leaderMarble = null;
-
-            marbles.forEach(m => {
-                m.view.position.copyFrom(m.body.position);
-                m.view.rotation = m.body.angle;
-                
-                if(m.body.position.y > leaderY) {
-                    leaderY = m.body.position.y;
-                    leaderMarble = m;
-                }
-
-                // Check Finish
-                if(m.body.position.y > finishLineY + CONFIG.ballRadius*2 && gameState === 'racing') {
-                    finishGame(m);
-                }
-            });
-
-            if(leaderMarble) document.getElementById('leader-name').innerText = "MARBLE " + leaderMarble.id;
-
-            // 2. Camera Follow (Smooth Lerp)
-            let targetY = -leaderY + H * 0.6;
-            // Limits
-            if(targetY > 0) targetY = 0;
-            // Prevent seeing past finish too much
-            const minY = -finishLineY + H/2;
-            if(targetY < minY) targetY = minY;
-            
-            cameraY += (targetY - cameraY) * 0.1;
-            app.stage.position.y = cameraY;
-        }
-
-        function finishGame(winner) {
-            gameState = 'finished';
-            document.getElementById('hud').classList.add('hidden');
-            const winScreen = document.getElementById('winner-screen');
-            winScreen.classList.remove('hidden');
-            
-            document.getElementById('winner-text').innerText = "MARBLE " + winner.id;
-            const avatar = document.getElementById('winner-avatar');
-            if(winner.photo) {
-                avatar.src = winner.photo.src;
-            } else {
-                // Create a placeholder if no photo
-                avatar.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=';
-                avatar.style.background = '#' + winner.view.children[0].tint.toString(16);
-            }
-
-            // Slow motion finish effect
-            engine.timing.timeScale = 0.2;
-            setTimeout(() => { Matter.Runner.stop(runner); }, 2000);
-        }
-    </script>
 </body>
 </html>
